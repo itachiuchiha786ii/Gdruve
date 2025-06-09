@@ -1,0 +1,9 @@
+python-telegram-bot==20.0
+google-api-python-client==2.97.0
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+flask
+requests
+tqdm
+nest_asyncio
+asyncio

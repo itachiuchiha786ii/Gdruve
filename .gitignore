@@ -1,0 +1,20 @@
+credentials.json
+token.json
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+env/
+venv/
+*.log
+
+# Secrets and config
+.env
+gdrive_config.json
+token.json
+credentials.json
+
+# System files
+.DS_Store
