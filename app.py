@@ -33,7 +33,8 @@ def home():
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 # Directory for saving incoming files
-DOWNLOAD_DIR = os.path.join(os.getcwd(), "downloads")
+# Directory for saving incoming files
+DOWNLOAD_DIR = "/tmp/bot_files"  # ✅ Safe on Render
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # In-memory session to store folder name per user
