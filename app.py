@@ -1,4 +1,5 @@
 import os
+import json
 import asyncio
 import logging
 import threading
@@ -26,13 +27,13 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "\ud83d\ude80 Bot is running!"
+    return "🚀 Bot is running!"
 
-# Telegram Bot Token
-TELEGRAM_TOKEN = "7817479276:AAHRhQ2lTVFX6QmOqPEMfXoQp2t25dJ6u_0"
+# Telegram Bot Token from ENV
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 # Directory for saving incoming files
-DOWNLOAD_DIR = "/data/data/com.termux/files/home/bot_files"
+DOWNLOAD_DIR = os.path.join(os.getcwd(), "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # In-memory session to store folder name per user
@@ -40,15 +41,12 @@ user_sessions = {}
 
 # Google Drive: Create or Get Folder
 def get_or_create_folder(service, folder_name):
-    # Search for folder
     query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
     results = service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
     items = results.get('files', [])
-
     if items:
         return items[0]['id']
     else:
-        # Create folder
         file_metadata = {
             'name': folder_name,
             'mimeType': 'application/vnd.google-apps.folder'
@@ -58,11 +56,12 @@ def get_or_create_folder(service, folder_name):
 
 # Google Drive: Upload File
 def upload_to_drive(file_path, file_name, folder_name):
-    creds = Credentials.from_authorized_user_file(
-        "token.json", ['https://www.googleapis.com/auth/drive.file']
+    google_token = os.getenv("GOOGLE_TOKEN_JSON")
+    creds = Credentials.from_authorized_user_info(
+        json.loads(google_token),
+        scopes=['https://www.googleapis.com/auth/drive.file']
     )
     service = build('drive', 'v3', credentials=creds)
-
     folder_id = get_or_create_folder(service, folder_name)
     file_metadata = {
         'name': file_name,
@@ -93,30 +92,30 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     folder_name = user_sessions.get(chat_id)
 
     if not folder_name:
-        await update.message.reply_text(" Please send the folder name first.")
+        await update.message.reply_text("❗ Please send the folder name first.")
         return
 
     file = update.message.document or update.message.video or update.message.audio
     if not file:
-        await update.message.reply_text(" No valid file received.")
+        await update.message.reply_text("⚠️ No valid file received.")
         return
 
     file_name = file.file_name or "file"
     file_path = os.path.join(DOWNLOAD_DIR, file_name)
 
-    await update.message.reply_text(" Downloading file...")
+    await update.message.reply_text("⬇️ Downloading file...")
     telegram_file = await context.bot.get_file(file.file_id)
     await telegram_file.download_to_drive(file_path)
 
-    await update.message.reply_text(" Uploading to Google Drive...")
+    await update.message.reply_text("📤 Uploading to Google Drive...")
     try:
         file_id = upload_to_drive(file_path, file_name, folder_name)
         await update.message.reply_text(
-            f" Uploaded: https://drive.google.com/file/d/{file_id}/view"
+            f"✅ Uploaded: https://drive.google.com/file/d/{file_id}/view"
         )
     except Exception as e:
         logging.error(f"Upload error: {e}")
-        await update.message.reply_text(f"Upload failed: {e}")
+        await update.message.reply_text(f"❌ Upload failed: {e}")
     finally:
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -139,8 +138,5 @@ def run_flask():
 
 # Start Everything
 if __name__ == "__main__":
-    import asyncio
-    import nest_asyncio
-    nest_asyncio.apply()
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    threading.Thread(target=run_flask).start()
+    asyncio.run(main())
